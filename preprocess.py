@@ -66,9 +66,6 @@ def distro_to_frags(distro, frag_len):
     n_frags = int(np.floor(distro.shape[0] / frag_len))
     save = []
 
-    if n_frags == 0:
-        pass
-
     # fragments from diagonal
     for i in range(0, n_frags):
         start = i*frag_len
@@ -95,7 +92,7 @@ def get_frags(distro_path, frag_len):
     # for job in tqdm(jobs):
     #     results.append(job.get())
 
-    results = [distro_to_frags(f[key][...], frag_len) for key in tqdm(keys)]
+    results = [distro_to_frags(f[key][...], frag_len) for key in tqdm(keys) if len(f[key][...]) > frag_len]
 
     f.close()
 
@@ -121,6 +118,6 @@ if __name__ == '__main__':
 
         with h5py.File(save_name, 'w') as f:
             f.create_dataset('arr', data=results, compression='gzip')
-    
+
 
 

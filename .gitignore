@@ -34,4 +34,5 @@ Temporary Items
 /pdbs
 /logs
 /data
+/lightning_logs
 __pycache__

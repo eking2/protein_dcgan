@@ -1,0 +1,10 @@
+defaults:
+  - _self_
+  - model: base
+  - data: base
+  - trainer: base
+
+  - override hydra/hydra_logging: colorlog
+
+work_dir: ${hydra:runtime.cwd}
+data_dir: ${work_dir}/data

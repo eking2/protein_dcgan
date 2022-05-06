@@ -11,20 +11,6 @@ import argparse
 import h5py
 
 
-class Distrograms(Dataset):
-    def __init__(self, path):
-        super().__init__()
-
-        with h5py.File(path, 'r') as f:
-            self.maps = f['arr'][:]
-
-    def __len__(self):
-        return self.maps.shape[0]
-
-    def __getitem__(self, idx):
-        return torch.as_tensor(self.maps[idx, ...], dtype=torch.float)
-
-
 class DCGAN(pl.LightningModule):
     def __init__(self, size, z_dim, learning_rate, beta1, beta2, **kwargs):
         super().__init__()
@@ -36,7 +22,7 @@ class DCGAN(pl.LightningModule):
 
     def forward(self, z):
 
-        '''generate a distrogram'''
+        '''generate a distogram'''
 
         return self.generator(z)
 
@@ -146,7 +132,7 @@ class DCGAN(pl.LightningModule):
 
     def on_epoch_end(self):
 
-        '''log generator distrograms from fixed_z and randomly sampled'''
+        '''log generator distograms from fixed_z and randomly sampled'''
 
         random_z = torch.randn(8, self.hparams.z_dim, 1, 1, device=self.device)
 
@@ -200,7 +186,7 @@ def cli_main():
     args = parser.parse_args()
 
     # data
-    dataset = Distrograms(script_args.path)
+    dataset = Distograms(script_args.path)
     loader = DataLoader(dataset, batch_size = script_args.batch_size, shuffle=True, pin_memory=True)
 
     # model

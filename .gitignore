@@ -29,11 +29,11 @@ Temporary Items
 # ignore notebook checkpoints
 .ipynb_checkpoints
 **/*.ipynb_checkpoints/
-/notebooks
 /supplemental
 /pdbs
 /logs
 /data
 /lightning_logs
-outputs/
+/scratch
+/outputs
 __pycache__

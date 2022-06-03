@@ -86,7 +86,7 @@ class Discriminator16(nn.Module):
             *disc_block(128, 256, 4, 2, 1, bn=True),  # (b, 256, 4, 4)
             *disc_block(256, 512, 3, 1, 1, bn=True),  # (b, 512, 4, 4)
             nn.Conv2d(512, 1, 4, 1, 0),               # (b, 1, 1, 1)
-            nn.Sigmoid()
+            #nn.Sigmoid()
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -106,7 +106,8 @@ class Generator64(nn.Module):
             *gen_block(128, 64, 4, 2, 1),        # (b, 64, 32, 32)
             nn.ConvTranspose2d(64, 1, 4, 2, 1),  # (b, 1, 64, 64)
             nn.ReLU(inplace=True),
-            EnforceSym()
+            EnforceSym(),
+            #nn.Tanh()
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -125,7 +126,7 @@ class Discriminator64(nn.Module):
             *disc_block(128, 256, 4, 2, 1, bn=True),  # (b, 256, 8, 8)
             *disc_block(256, 512, 4, 2, 1, bn=True),  # (b, 512, 4, 4)
             nn.Conv2d(512, 1, 4, 1, 0),               # (b, 1, 1, 1)
-            nn.Sigmoid()
+            #nn.Sigmoid()
         )
 
     def forward(self, x: Tensor) -> Tensor:
@@ -164,7 +165,7 @@ class Discriminator128(nn.Module):
             *disc_block(128, 256, 4, 4, 0, bn=True),  # (b, 256, 8, 8)
             *disc_block(256, 512, 4, 2, 1, bn=True),  # (b, 512, 4, 4)
             nn.Conv2d(512, 1, 4, 1, 0),               # (b, 1, 1, 1)
-            nn.Sigmoid()
+            #nn.Sigmoid()
         )
 
     def forward(self, x: Tensor) -> Tensor:

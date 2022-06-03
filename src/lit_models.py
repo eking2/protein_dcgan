@@ -5,11 +5,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 import pytorch_lightning as pl
 from torchvision.utils import make_grid
+from .utils import flip_labels
 from .models import (Generator16, Generator64, Generator128,
                      Discriminator16, Discriminator64, Discriminator128)
 
 class DCGAN(pl.LightningModule):
-    def __init__(self, frag_size: int, z_dim: int, lr: float, beta1: float, beta2: float, downsample: int):
+    def __init__(self, frag_size: int, z_dim: int, lr: float, beta1: float, beta2: float):
         super().__init__()
 
         self.save_hyperparameters()
@@ -62,16 +63,16 @@ class DCGAN(pl.LightningModule):
         beta2 = self.hparams.beta2
         betas = (beta1, beta2)
 
-        opt_g = optim.Adam(self.generator.parameters(), lr=lr, betas=betas)
         opt_d = optim.Adam(self.discriminator.parameters(), lr=lr, betas=betas)
+        opt_g = optim.Adam(self.generator.parameters(), lr=lr, betas=betas)
 
         return [opt_d, opt_g], []
 
-    def gen_fake(self) -> Tensor:
+    def gen_fake(self, batch_size: int) -> Tensor:
 
-        '''use same generated fake for both discriminator and generator training steps'''
+        '''generate fake for training steps'''
 
-        random_z = torch.randn_like(self.fixed_z, device=self.device)
+        random_z = torch.randn(batch_size, self.hparams.z_dim, 1, 1, device=self.device)
         fake = self(random_z)
 
         return fake
@@ -81,9 +82,11 @@ class DCGAN(pl.LightningModule):
         '''how well does the fake fool the discriminator'''
 
         # fake through disc
+        #noise = torch.normal(mean=0, std=0.1/(self.current_epoch + 1), size=fake.shape, device=self.device) 
         fake_pred = self.discriminator(fake).view(-1)
-        real_labels = torch.ones_like(fake_pred, device=self.device)
-        gen_loss = F.binary_cross_entropy(fake_pred, real_labels)
+        #real_labels = torch.ones_like(fake_pred, device=self.device)
+        real_labels = torch.full(fake_pred.shape, 0.9, device=self.device)
+        gen_loss = F.binary_cross_entropy_with_logits(fake_pred, real_labels)
 
         return gen_loss
 
@@ -91,16 +94,24 @@ class DCGAN(pl.LightningModule):
 
         '''can the discriminator distinguish fakes and reals'''
 
+        # discontinuous gaps, downsampling instead of norm make training generator hard
+        # run with label smoothing, noisy labels
+
         # real
+        #noise = torch.normal(mean=0, std=0.1/(self.current_epoch + 1), size=real.shape, device=self.device) 
         real_pred = self.discriminator(real).view(-1)
-        real_labels = torch.ones_like(real_pred, device=self.device)
-        real_loss = F.binary_cross_entropy(real_pred, real_labels)
+        #real_labels = torch.ones_like(real_pred, device=self.device)
+        real_labels = torch.full(real_pred.shape, 0.9, device=self.device)
+        #real_labels = flip_labels(real_labels, 0.05)
+        real_loss = F.binary_cross_entropy_with_logits(real_pred, real_labels)
 
         # fake
         # do not backward through gen
+        #noise = torch.normal(mean=0, std=0.1/(self.current_epoch + 1), size=fake.shape, device=self.device) 
         fake_pred = self.discriminator(fake.detach()).view(-1)
         fake_labels = torch.zeros_like(fake_pred, device=self.device)
-        fake_loss = F.binary_cross_entropy(fake_pred, fake_labels)
+        #fake_labels = flip_labels(fake_labels, 0.05)
+        fake_loss = F.binary_cross_entropy_with_logits(fake_pred, fake_labels)
 
         disc_loss = (real_loss + fake_loss) / 2
 
@@ -109,10 +120,10 @@ class DCGAN(pl.LightningModule):
 
     def training_step(self, batch: Tensor, batch_idx: int, optimizer_idx: int) -> Tensor:
 
-        # add channels dim -> (bchw)
-        # downsample instead of normalize
-        real = batch.unsqueeze(1) / self.hparams.downsample
-        fake = self.gen_fake()
+        # downsample not stable
+        real = batch
+        batch_size = real.shape[0]
+        fake = self.gen_fake(batch_size)
 
         # train disc
         if optimizer_idx == 0:

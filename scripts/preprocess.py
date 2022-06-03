@@ -20,6 +20,8 @@ def parse_args() -> argparse.Namespace:
                         help="path to hdf5 distograms")
     parser.add_argument("-f", "--fragment", type=int, choices=[16, 64, 128],
                         help="non-overlapping fragment length",)
+    parser.add_argument("-c", "--cutoff", type=int, default=100,
+                        help="max allowable distance, above are errors to discarded",)
     parser.add_argument("-o", "--out", type=str, 
                         help="path to output fragments")
 
@@ -77,14 +79,14 @@ def disto_to_frags(disto: np.ndarray, frag_len: int) -> np.ndarray:
         start = i * frag_len
         end = i * frag_len + frag_len
         arr = disto[start:end, start:end]
+
         save.append(arr)
 
     # (n_frags, frag_len, frag_len)
     return np.stack(save, axis=0)
 
 
-def get_frags(disto_path: str, frag_len: int) -> np.ndarray:
-
+def get_frags(disto_path: str, frag_len: int, cutoff: int) -> np.ndarray:
     # n_cpus = mp.cpu_count() - 2 if mp.cpu_count() >= 4 else 2
     # pool = mp.Pool(n_cpus)
 
@@ -98,11 +100,20 @@ def get_frags(disto_path: str, frag_len: int) -> np.ndarray:
     # for job in tqdm(jobs):
     #     results.append(job.get())
 
-    results = [
-        disto_to_frags(f[key][...], frag_len)
-        for key in tqdm(keys)
-        if len(f[key][...]) > frag_len
-    ]
+    #results = [
+    #    disto_to_frags(f[key][...], frag_len, cutoff)
+    #    for key in tqdm(keys)
+    #    if len(f[key][...]) > frag_len
+    #]
+
+    results = []
+    for key in tqdm(keys):
+        # discard samples with distance artifacts
+        arr = f[key][...]
+        if len(arr) > frag_len and np.max(arr) <= cutoff:
+            frags = disto_to_frags(f[key][...], frag_len)
+            results.append(frags)
+
     f.close()
 
     return np.concatenate(results, axis=0)
@@ -116,6 +127,7 @@ if __name__ == "__main__":
 
     # 2. distograms to fragments
     # >>> python preprocess.py -d <path_to_distograms> -f <fragment_size> -o <path_to_output_fragments>
+    # >>> python preprocess.py -d ../data/training_30_disto.hdf5 -f 64 -o ../data/training_30_64.hdf5
 
     args = parse_args()
 
@@ -126,6 +138,6 @@ if __name__ == "__main__":
     #    raise Exception('Must select fragment length with --fragment and disto path with --disto')
 
     if args.disto and args.fragment and args.out:
-        results = get_frags(args.disto, args.fragment)
+        results = get_frags(args.disto, args.fragment, args.cutoff)
         with h5py.File(args.out, "w") as f:
             f.create_dataset("arr", data=results, compression="gzip")

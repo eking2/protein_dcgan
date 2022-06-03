@@ -2,7 +2,8 @@ _target_: torch.utils.data.DataLoader
 dataset:
   _target_: src.datasets.Distograms
   path: ${data_dir}/training_30_${model.frag_size}.hdf5
-batch_size: 64
+  xmax: 100
+batch_size: 128
 shuffle: True
-num_workers: 1
+num_workers: 4
 pin_memory: True

@@ -7,6 +7,7 @@ def main(cfg: DictConfig) -> None:
     from src.train_pipe import train
 
     #print(OmegaConf.to_yaml(cfg))
+    # generator not stable 
     train(cfg)
 
 if __name__ == '__main__':
